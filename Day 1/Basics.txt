@@ -1,4 +1,4 @@
-e) Logical Programming Language : Instead of Instruction as what to do, we use of series of facts and rules that will be interpreted by the system and give out Decisions.
+E) Logical Programming Language : Instead of Instruction as what to do, we use of series of facts and rules that will be interpreted by the system and give out Decisions.
 
 Prolog
 Data Log
@@ -33,3 +33,5 @@ Domain Naming System
 	physical layering and logical layering
 	tier smooth serving purpose
 EG: DHCP, Load Balance, Security Services
+
+Done By Naveen.T
