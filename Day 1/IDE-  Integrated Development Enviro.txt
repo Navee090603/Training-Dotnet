@@ -1,0 +1,22 @@
+IDE-  Integrated Development Environment VS2019
+For .NET Framework
+
+Not a Cross-Platform only .NET core is cross platform
+Only runs on windows platform
+Software components that provide tools and library, that enables developers to create software much easier and faster (RAD).
+
+Architecture is a ---> "layered one" for .NET (7 layers)
+
+1. Language Independent
+2. WinForms {WPF - Windows Presentation Framework, Silverlight, ASP.Net}
+3. WCF and WWF (Communication And Work Flow)
+4. ADO.net, LINQ, XML (Data Tier)
+5. Base Class Library {Framework Class Library}
+6. CLR
+7. OS
+
+1)
+source code ---> compiler ---> Executable/native code ---> operating system
+
+2)
+source code ---> compiler ---> "Intermediate code" [Common Language Runtime] [Just in time(JIT) compiler]---> Executable/native code ---> operating system

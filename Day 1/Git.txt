@@ -1,0 +1,34 @@
+Git : Is an open source version control system. Various need of individual.
+
+Git Hub : Is a company founded in 2008, that makes tools which integrate with 
+the git (Platform for integration)
+
+A cloud based platform where we can store, share and work together with others.
+
+alternate to GitHub : GitLab, Bitbucket, Host-your-own(gags and Gittea)
+
+Types : Centralized
+	Distributed (Git and GitHub)
+
+GITBASH Command - PWD - Print current working directory
+ 		  Cd  -	Change the directory
+		  
+Cmd commands - cd.. - dive deeper in directory
+	       dir  -  lists all files and subdirectories within the specified directory and its subdirectories.
+	       sampledir - to make files
+
+
+1. git init
+2. Make own remote repository
+3. Move file from local repository to remote repository
+4. https will be easy
+5. sinking both local and remote repository 1 loco repo will have 1 remote repo (git add remote origin(Alice name)) - git remote -v -> for fetching as well as pushing 
+6. Staging from the local file. {git add .}. To unstage we can use (git rm --cached Filename), git status.
+7.Comminting the file. (git commit -m "Message want to given and it should be meaningful.")
+8.Next is the Push - upstream and downstream(git push origin(remote repository of the link) master (branch name)) ---> Enumerating of data will happen here
+9.Next is Pull. Pull is for the updates from the remote repository.(git pull [remote-name] [branch-name])
+
+
+	
+	 
+	       

@@ -1,0 +1,35 @@
+e) Logical Programming Language : Instead of Instruction as what to do, we use of series of facts and rules that will be interpreted by the system and give out Decisions.
+
+Prolog
+Data Log
+Alma
+Abyss
+
+f) Front End languages : They are mainly used for  supporting user interfaces and user experience in the form of Images, text, colors, navigation.
+
+Html/CSS
+React.js
+JavaScript
+Angular
+
+g)Back End Language: Deals with storage and manipulation of Data (Server side software). No direct interaction with the user. To procure the Data.
+
+JavaScript
+PHP
+Java
+C#
+
+
+Application Development Model:
+	1. Desktop application/ Windows application (1 tier)
+	2. Client server application(2 tier, 3 tier, n tier)
+	3. Web Model
+
+
+
+Domain Naming System
+	It Translate human-readable domain name into numerical IP address that computers use to identify each other on the network.
+	Load balancer - A load balancer is a solution that acts as a traffic proxy and distributes network or application traffic across endpoints on a number of servers.
+	physical layering and logical layering
+	tier smooth serving purpose
+EG: DHCP, Load Balance, Security Services
