@@ -20,3 +20,17 @@ source code ---> compiler ---> Executable/native code ---> operating system
 
 2)
 source code ---> compiler ---> "Intermediate code" [Common Language Runtime] [Just in time(JIT) compiler]---> Executable/native code ---> operating system
+
+Points to Remember
+
+IL also know as CIL/MSIL/Managed code --->  unmanaged code managed by OS
+Assembly Files are fundamental unit of deployment, Version Control, and reusable, .net application.
+That are 2 types EXE file or DLL
+	- Consists of IL, Manifest File -> Metadata, PE (portable executable) Header, CLR Header
+	- can be private or shared
+
+In conclusion dotnet is the Microsoft web services strategy to connect information, people, systems and devices through software.
+
+Desktop - deployed in each machine (Console,Windows)
+Web Application - Internet based application accessed through browsers (Asp.Net winforms,Asp.Net core and Asp.Net)
+Mobile - Xamarin
