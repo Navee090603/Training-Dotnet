@@ -1,0 +1,7 @@
+C:\Users\naveent\Downloads\Training\Day13\Day13\bin\Debug\Day13.exe.config
+C:\Users\naveent\Downloads\Training\Day13\Day13\bin\Debug\Day13.exe
+C:\Users\naveent\Downloads\Training\Day13\Day13\bin\Debug\Day13.pdb
+C:\Users\naveent\Downloads\Training\Day13\Day13\obj\Debug\Day13.csproj.AssemblyReference.cache
+C:\Users\naveent\Downloads\Training\Day13\Day13\obj\Debug\Day13.csproj.CoreCompileInputs.cache
+C:\Users\naveent\Downloads\Training\Day13\Day13\obj\Debug\Day13.exe
+C:\Users\naveent\Downloads\Training\Day13\Day13\obj\Debug\Day13.pdb

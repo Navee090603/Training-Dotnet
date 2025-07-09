@@ -1,0 +1,108 @@
+🔍ILDASM (Intermediate Language Disassembler)
+Purpose: Converts a compiled .NET assembly (like .exe or .dll) into readable IL (Intermediate Language) code.
+
+Use case: Want to peek under the hood of a compiled C# program? ILDASM lets you see the IL instructions and metadata.
+
+Tool type: Disassembler
+
+🛠️ ILASM (Intermediate Language Assembler)
+Purpose: Takes IL code (usually from a .il file) and compiles it back into a .NET assembly.
+
+Use case: After modifying IL code or writing it manually, you can use ILASM to rebuild the executable.
+
+Tool type: Assembler
+
+🧠 In short:
+ILDASM: .exe → .il (disassemble)
+
+ILASM: .il → .exe (assemble)
+
+-----------------------------------------------------------------------
+
+🧱 1. Value Type
+Stored directly in memory (stack).
+
+Holds the actual data.
+
+When you assign it to another variable, a copy is made.
+
+Includes all basic types.
+
+🎒 2. Reference Type
+Stored on the heap, and the variable holds a reference (address) to the actual data.
+
+When assigned, both variables point to the same object.
+
+Modifying one affects the other.
+
+-----------------------------------------------------------------------
+
+Literals in C# 
+   String Literal   == Hello World
+   Character   
+   Integer
+   Null      '/0'
+   Real
+   Boolean  true/false
+
+-----------------------------------------------------------------------
+
+Types of Conversion :
+	1. Implicit --> Small to Large (int --> int64), Compiler handles its own
+	2. Explicit --> Large to Small (int32 --> int), using a typecast or conversion function
+
+------------------------------------------------------------------------
+
+--Parse() 
+	parsing typically refers to converting a string into another data type—like numbers, dates, booleans, or even complex objects. It's super useful when you're taking user input or reading from a file or API where everything comes in as text.
+
+and tryParse()
+
+	in C# is a safe and reliable way to convert strings into other data types without risking a crash if the input is invalid
+
+------------------------------------------------------------------------
+
+Conversion between value types and reference types 
+ 1. Boxing : Converting a value type to a reference type
+
+ 2. Unboxing : Converting reference type to value type
+
+------------------------------------------------------------------------
+
+--Implicitly Typed data types
+   - var : is a type that can take up any other type
+           - we need to assign a value at the time of declaration itself
+           - once assigned, cannot alter the type
+
+   - dynamic : are reference types that remains dynamic (during compilation)
+               - need not initialize at the time of declaration
+               - can be assigned any data
+               - undergoes boxing/unboxing(conversions) during runtime (performance overhead)
+               - advised to minimize the usage of dynamic types
+
+-------------------------------------------------------------------------
+
+-- Null Literals : as of C# 7.0 all reference types are by default null
+
+Nullables : Generally are unknown information. We can assign normal range of values as well as null values using nullable ('?')
+
+- nullable types bridge the difference between C# types and the database types
+- Transformation of nulls and non nulls
+
+Null Coalescing (??)operator can minimize the code of working with nullable values
+
+--------------------------------------------------------------------------
+
+Control Statement:
+
+Selection ------> If , Switch
+Iteration ------> While, do while, for, for each
+Jump      ------> break, Continue, throw, goto, return
+					 (Lable)
+
+goto : are used for transfer of control within the function
+-------------------------------------------------------------------------
+
+Structures : ValueType --> Primitive DataType were wrap into Structures.
+
+

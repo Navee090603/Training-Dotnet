@@ -1,0 +1,7 @@
+C:\Users\naveent\Downloads\Training\Day12\Day12\bin\Debug\Day12.exe.config
+C:\Users\naveent\Downloads\Training\Day12\Day12\bin\Debug\Day12.exe
+C:\Users\naveent\Downloads\Training\Day12\Day12\bin\Debug\Day12.pdb
+C:\Users\naveent\Downloads\Training\Day12\Day12\obj\Debug\Day12.csproj.AssemblyReference.cache
+C:\Users\naveent\Downloads\Training\Day12\Day12\obj\Debug\Day12.csproj.CoreCompileInputs.cache
+C:\Users\naveent\Downloads\Training\Day12\Day12\obj\Debug\Day12.exe
+C:\Users\naveent\Downloads\Training\Day12\Day12\obj\Debug\Day12.pdb

@@ -1,0 +1,10 @@
+C:\Users\naveent\Downloads\Training\Day7\WindowsForm_01\WindowsForm_01\bin\Debug\WindowsForm_01.exe.config
+C:\Users\naveent\Downloads\Training\Day7\WindowsForm_01\WindowsForm_01\bin\Debug\WindowsForm_01.exe
+C:\Users\naveent\Downloads\Training\Day7\WindowsForm_01\WindowsForm_01\bin\Debug\WindowsForm_01.pdb
+C:\Users\naveent\Downloads\Training\Day7\WindowsForm_01\WindowsForm_01\obj\Debug\WindowsForm_01.csproj.AssemblyReference.cache
+C:\Users\naveent\Downloads\Training\Day7\WindowsForm_01\WindowsForm_01\obj\Debug\WindowsForm_01.Form1.resources
+C:\Users\naveent\Downloads\Training\Day7\WindowsForm_01\WindowsForm_01\obj\Debug\WindowsForm_01.Properties.Resources.resources
+C:\Users\naveent\Downloads\Training\Day7\WindowsForm_01\WindowsForm_01\obj\Debug\WindowsForm_01.csproj.GenerateResource.cache
+C:\Users\naveent\Downloads\Training\Day7\WindowsForm_01\WindowsForm_01\obj\Debug\WindowsForm_01.csproj.CoreCompileInputs.cache
+C:\Users\naveent\Downloads\Training\Day7\WindowsForm_01\WindowsForm_01\obj\Debug\WindowsForm_01.exe
+C:\Users\naveent\Downloads\Training\Day7\WindowsForm_01\WindowsForm_01\obj\Debug\WindowsForm_01.pdb

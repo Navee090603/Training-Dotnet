@@ -1,0 +1,12 @@
+C:\Users\naveent\Downloads\Training\Day7\WinForm_02\WinForm_02\bin\Debug\WinForm_02.exe.config
+C:\Users\naveent\Downloads\Training\Day7\WinForm_02\WinForm_02\bin\Debug\WinForm_02.exe
+C:\Users\naveent\Downloads\Training\Day7\WinForm_02\WinForm_02\bin\Debug\WinForm_02.pdb
+C:\Users\naveent\Downloads\Training\Day7\WinForm_02\WinForm_02\obj\Debug\WinForm_02.csproj.AssemblyReference.cache
+C:\Users\naveent\Downloads\Training\Day7\WinForm_02\WinForm_02\obj\Debug\WinForm_02.Form1.resources
+C:\Users\naveent\Downloads\Training\Day7\WinForm_02\WinForm_02\obj\Debug\WinForm_02.Properties.Resources.resources
+C:\Users\naveent\Downloads\Training\Day7\WinForm_02\WinForm_02\obj\Debug\WinForm_02.csproj.GenerateResource.cache
+C:\Users\naveent\Downloads\Training\Day7\WinForm_02\WinForm_02\obj\Debug\WinForm_02.csproj.CoreCompileInputs.cache
+C:\Users\naveent\Downloads\Training\Day7\WinForm_02\WinForm_02\obj\Debug\WinForm_02.exe
+C:\Users\naveent\Downloads\Training\Day7\WinForm_02\WinForm_02\obj\Debug\WinForm_02.pdb
+C:\Users\naveent\Downloads\Training\Day7\WinForm_02\WinForm_02\obj\Debug\WinForm_02.Form2.resources
+C:\Users\naveent\Downloads\Training\Day7\WinForm_02\WinForm_02\obj\Debug\WinForm_02.Form3.resources

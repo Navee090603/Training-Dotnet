@@ -1,0 +1,198 @@
+5."The ----- operator is used to search for values that are within a set of values, given the minimum value and the maximum value."
+(1 Point)
+
+Like
+
+WHERE
+
+IN
+
+BETWEEN
+6.Which keyword is used to define a class in C#?
+(1 Point)
+
+Class
+
+class
+
+System.class
+
+Console.class
+7.CLR stands for ___.
+(1 Point)
+
+Common Type System
+
+Common Language Specification
+
+Common Language Runtime
+
+Java Virtual Machine
+8.Which  SQL query is written to find out the list   of student with name beginning from s.
+(1 Point)
+
+Select * from student Where name like 's—'
+
+Select * from student where name like 's%'
+
+Select name, age from s where name like 's$'
+
+select * from student where name='s%'
+9."Garbage collection automatically reclaims memory occupied by unreachable unused objects." – This statement is true or false in C#?
+(1 Point)
+
+TRUE
+
+FALSE
+10.Inline styles are written within the _____ attribute.
+(1 Point)
+
+Style
+
+Css
+
+Stylesheet
+
+Both A and B
+11.Which symbols are used to mark the beginning and end of a code block?
+(1 Point)
+
+Square brackets []
+
+Curly braces {}
+
+Round brackets ()
+
+Double-quotes ""
+12.Which SQL function is used to count the number of rows in a SQL query?
+(1 Point)
+
+COUNT()
+
+NUMBER()
+
+SUM()
+
+COUNT(*)
+13.C# was developed by ?
+(1 Point)
+
+Bjarne Stroustrup
+
+Anders Hejlsberg
+
+Denis Ritchie
+
+Tim Lee
+14.Which array property is used to get the total number of elements in C#?
+(1 Point)
+
+Len
+
+Length
+
+Max
+
+MaxLength
+15.Which method is used to attach an event handler function to an HTML element when the form field gets focus?
+(1 Point)
+
+focused()
+
+focuses()
+
+focus()
+
+focuselement()
+16.What is the extension of a C# language file?
+(1 Point)
+
+.c
+
+.cpp
+
+.cs
+
+.csp
+17.What   does  CSS describes?
+(1 Point)
+
+CSS describes how calculation perform on button click.
+
+CSS describes how HTML elements are to be displayed on screen, paper, or in other media
+
+Both A. and B.
+
+None of the above
+18.In C#, the multi-line comments placed within the ___.
+(1 Point)
+
+// and //
+
+\\ and //
+
+<!-- and -->
+
+/* and */
+19.Which is the correct way to declare an object of the class in C#?
+(1 Point)
+
+Class_Name Object_Name = new
+
+Class_Name();
+
+Class_Name Object_Name;
+
+new Object_Name as Class_Name();
+
+Both A and B
+20.What is the default "SORT" order for a SQL?
+(1 Point)
+
+Ascending
+
+Descending
+
+Mixed mode
+
+All of the mentioned
+21.C# programming language is used to develop -
+(1 Point)
+
+Web Apps
+
+Desktop Apps
+
+Mobile Apps
+
+All of the above
+22.HTML elements are positioned ___ by default.
+(1 Point)
+
+Static
+
+Fixed
+
+Relative
+
+None
+23.Which data type is used to store text value in C#?
+(1 Point)
+
+text
+
+txt
+
+string
+
+str
+24.JavaScript language is _____?
+(1 Point)
+
+Object Oriented
+
+Functional Programming
+
+Object Based
+
+All of the above

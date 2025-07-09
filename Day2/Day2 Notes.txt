@@ -1,0 +1,53 @@
+goto ---> is like a loop like method used.
+----------------------------------------
+Arrays : Arrays are continuous memory allocation of the same type with a fixed size and are reference types.
+
+Types : Single Dimension, Two or Multi, Jagged Array.
+----------------------------------------
+
+Instance member : are members that are available as a copy to each and every object that is created.
+                  They are accessed only with the object reference
+
+Static Members: are known as class members
+                  only one copy exists for the entire class
+                  they are managed and maintained by the CLR
+                  are accessed only with the class name.
+
+-----------------------------------------
+Strings: 
+
+- are a collection of characters
+- are predefined reference types
+- memory is allocated on the heap
+- strings have fixed size
+- strings are immutable
+- strings memory cannot be changed
+
+String Builders : Same as String but mutable.
+
+-----------------------------------------
+
+Structures and Enumeration 
+
+ Structures : are user defined value types
+             are used to create and store multiple data of different data types as a single unit
+
+Enumerations : are a set/collection of named constants
+               are user defined value types
+               are declared using Enum keyword
+               the default type of any enumeration list is int
+               is used when we want to store a list of values that generally correspond to a particular type
+
+-----------------------------------------
+ReadOnly : variables/fields that are declared using 'readonly' keyword
+           They cannot be modified after they are initialized
+           We can initialize readonly variables either at the time of declaration or thru a constructor
+           Constructor initializations have precedence
+           They are similar to non-static members(meaning, it is maintained as a separate copy in each object)
+           While the non-static members values can be changed by the object, the same is not possible with readonly
+
+
+Constants  : are like readonly (meaning once initialized cannot be modified)
+             Unlike readonly we can initialize the constants only at the time of declaration
+             Are like static members because there exists only one copy of the constant for the entire class
+             While static members can be changed, constants cannot be

@@ -1,0 +1,28 @@
+c# vs .Net
+CLR
+Architecture of .Net Application
+
+
+C#
+
+Is a programming language
+.Net is framwork for building application on windows
+
+.Net includes CLR (Common Language Runtime) and Class Library (for building application)
+
+CLR
+
+In c or c++ we dont have any IL code 
+
+But in java we have Byte code which converts the normal code into byte then it convert that into native code.
+
+The idea from the java in Csharp we have CLR which is the application that placed inthe memory and coneverts the IL code into Native code
+the process is called just in time JIT
+
+Architecture 
+
+At the higher level for build an application we have bulinding blocks called classes 
+
+class ---> Data and Methods
+Data ---> Also called attribute and this is the state of the application.
+Methods ---> Also called Functions and this is the behaviours they execute code  and do things for ourself.

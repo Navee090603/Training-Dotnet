@@ -1,0 +1,19 @@
+C# : is a modern general purpose, Object oriented programming lang by Microsoft 
+	- Was developed by Anders Hejlsberg and his Team During the development of Dotnet.
+	- Is designed for Common Lang Infrastructure which consists of executable code , runtime environment, allowing high level languages on different Platform and architecture.
+
+To view the output in 2019 VS we need to write the command Read(one char) or ReadLine(many words) or Readkey (Func Keys).
+
+Namespace - Grouping of related elements like classes, interface, Events, Enumerates (a number of things one by one) , structure and other namespaces.
+
+1 project --> many files ---> many namespaces ---> many class ---> many functions
+
+Concatenation --> +
+Placeholder --> "Your name {0} lastname {1}", lname,fname
+String Interpolation --> $"Firstname{fname} lastname{lname} age is {age}"
+
+WriteLine is 18 times overloaded. like empty, string, int, double, long
+
+https://github.com/BanurekhaV/Infinite_June2025
+
+rekhasairam@hotmail.com
