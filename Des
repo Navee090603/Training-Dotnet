@@ -1,0 +1,742 @@
+# Electricity Billing Automation System - ASP.NET WebForm Solution
+
+I'll guide you through creating a complete solution for the Electricity Board billing automation system using ASP.NET WebForms with C#. This will be a single project solution with all required components.
+
+## Step 1: Create the ASP.NET Web Application
+
+1. Open Visual Studio
+2. Create a new project: "ASP.NET Web Application (.NET Framework)"
+3. Name it "ElectricityBillingSystem"
+4. Select "Web Forms" template
+5. Click Create
+
+## Step 2: Set Up the Database
+
+1. Open SQL Server Management Studio
+2. Create a new database named "ElectricityBillDB"
+3. Run this SQL script to create the table:
+
+```sql
+CREATE TABLE ElectricityBill (
+    consumer_number varchar(20) NOT NULL,
+    consumer_name varchar(50) NOT NULL,
+    units_consumed int NOT NULL,
+    bill_amount float NOT NULL
+);
+```
+
+## Step 3: Configure Web.config
+
+Add this connection string to your Web.config file inside the `<configuration>` section:
+
+```xml
+<connectionStrings>
+    <add name="ElectricityBillDBConnection" 
+         connectionString="Data Source=.;Initial Catalog=ElectricityBillDB;Integrated Security=True" 
+         providerName="System.Data.SqlClient"/>
+</connectionStrings>
+```
+
+## Step 4: Create the Model Classes
+
+### ElectricityBill.cs
+
+Create a new class file in the App_Code folder:
+
+```csharp
+using System;
+
+public class ElectricityBill
+{
+    private string consumerNumber;
+    private string consumerName;
+    private int unitsConsumed;
+    private double billAmount;
+
+    public string ConsumerNumber
+    {
+        get { return consumerNumber; }
+        set
+        {
+            if (!System.Text.RegularExpressions.Regex.IsMatch(value, @"^EB\d{5}$"))
+            {
+                throw new FormatException("Invalid Consumer Number");
+            }
+            consumerNumber = value;
+        }
+    }
+
+    public string ConsumerName
+    {
+        get { return consumerName; }
+        set { consumerName = value; }
+    }
+
+    public int UnitsConsumed
+    {
+        get { return unitsConsumed; }
+        set { unitsConsumed = value; }
+    }
+
+    public double BillAmount
+    {
+        get { return billAmount; }
+        set { billAmount = value; }
+    }
+}
+```
+
+### BillValidator.cs
+
+Create another class file in App_Code:
+
+```csharp
+public class BillValidator
+{
+    public string ValidateUnitsConsumed(int unitsConsumed)
+    {
+        if (unitsConsumed < 0)
+        {
+            return "Given units is invalid";
+        }
+        return null;
+    }
+}
+```
+
+## Step 5: Create the DBHandler Class
+
+### DBHandler.cs
+
+```csharp
+using System;
+using System.Data;
+using System.Data.SqlClient;
+using System.Configuration;
+
+public class DBHandler
+{
+    public SqlConnection GetConnection()
+    {
+        string connectionString = ConfigurationManager.ConnectionStrings["ElectricityBillDBConnection"].ConnectionString;
+        SqlConnection connection = new SqlConnection(connectionString);
+        return connection;
+    }
+}
+```
+
+## Step 6: Create the ElectricityBoard Utility Class
+
+### ElectricityBoard.cs
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+
+public class ElectricityBoard
+{
+    public void AddBill(ElectricityBill ebill)
+    {
+        DBHandler dbHandler = new DBHandler();
+        using (SqlConnection connection = dbHandler.GetConnection())
+        {
+            connection.Open();
+            string query = "INSERT INTO ElectricityBill (consumer_number, consumer_name, units_consumed, bill_amount) VALUES (@consumerNumber, @consumerName, @unitsConsumed, @billAmount)";
+            
+            using (SqlCommand command = new SqlCommand(query, connection))
+            {
+                command.Parameters.AddWithValue("@consumerNumber", ebill.ConsumerNumber);
+                command.Parameters.AddWithValue("@consumerName", ebill.ConsumerName);
+                command.Parameters.AddWithValue("@unitsConsumed", ebill.UnitsConsumed);
+                command.Parameters.AddWithValue("@billAmount", ebill.BillAmount);
+                
+                command.ExecuteNonQuery();
+            }
+        }
+    }
+
+    public void CalculateBill(ElectricityBill ebill)
+    {
+        int units = ebill.UnitsConsumed;
+        double billAmount = 0;
+
+        if (units <= 100)
+        {
+            billAmount = 0;
+        }
+        else if (units > 100 && units <= 300)
+        {
+            billAmount = (units - 100) * 1.5;
+        }
+        else if (units > 300 && units <= 600)
+        {
+            billAmount = 200 * 1.5 + (units - 300) * 3.5;
+        }
+        else if (units > 600 && units <= 1000)
+        {
+            billAmount = 200 * 1.5 + 300 * 3.5 + (units - 600) * 5.5;
+        }
+        else if (units > 1000)
+        {
+            billAmount = 200 * 1.5 + 300 * 3.5 + 400 * 5.5 + (units - 1000) * 7.5;
+        }
+
+        ebill.BillAmount = billAmount;
+    }
+
+    public List<ElectricityBill> Generate_N_BillDetails(int num)
+    {
+        List<ElectricityBill> bills = new List<ElectricityBill>();
+        DBHandler dbHandler = new DBHandler();
+        
+        using (SqlConnection connection = dbHandler.GetConnection())
+        {
+            connection.Open();
+            string query = "SELECT TOP (@num) consumer_number, consumer_name, units_consumed, bill_amount FROM ElectricityBill ORDER BY consumer_number DESC";
+            
+            using (SqlCommand command = new SqlCommand(query, connection))
+            {
+                command.Parameters.AddWithValue("@num", num);
+                
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        ElectricityBill bill = new ElectricityBill();
+                        bill.ConsumerNumber = reader["consumer_number"].ToString();
+                        bill.ConsumerName = reader["consumer_name"].ToString();
+                        bill.UnitsConsumed = Convert.ToInt32(reader["units_consumed"]);
+                        bill.BillAmount = Convert.ToDouble(reader["bill_amount"]);
+                        
+                        bills.Add(bill);
+                    }
+                }
+            }
+        }
+        
+        return bills;
+    }
+}
+```
+
+## Step 7: Create the Admin Login Page
+
+### Login.aspx
+
+```html
+<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Login.aspx.cs" Inherits="ElectricityBillingSystem.Login" %>
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <title>Admin Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .login-container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+        .login-container h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .btn-login {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-login:hover {
+            background-color: #45a049;
+        }
+        .error-message {
+            color: red;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Admin Login</h2>
+        <form id="form1" runat="server">
+            <div class="form-group">
+                <label for="txtUsername">Username</label>
+                <asp:TextBox ID="txtUsername" runat="server"></asp:TextBox>
+            </div>
+            <div class="form-group">
+                <label for="txtPassword">Password</label>
+                <asp:TextBox ID="txtPassword" runat="server" TextMode="Password"></asp:TextBox>
+            </div>
+            <asp:Button ID="btnLogin" runat="server" Text="Login" CssClass="btn-login" OnClick="btnLogin_Click" />
+            <asp:Label ID="lblError" runat="server" CssClass="error-message"></asp:Label>
+        </form>
+    </div>
+</body>
+</html>
+```
+
+### Login.aspx.cs
+
+```csharp
+using System;
+
+namespace ElectricityBillingSystem
+{
+    public partial class Login : System.Web.UI.Page
+    {
+        protected void Page_Load(object sender, EventArgs e)
+        {
+        }
+
+        protected void btnLogin_Click(object sender, EventArgs e)
+        {
+            string username = txtUsername.Text.Trim();
+            string password = txtPassword.Text.Trim();
+
+            // Simple validation - in real application, use secure authentication
+            if (username == "admin" && password == "admin123")
+            {
+                Session["AdminLoggedIn"] = true;
+                Response.Redirect("Billing.aspx");
+            }
+            else
+            {
+                lblError.Text = "Invalid username or password";
+            }
+        }
+    }
+}
+```
+
+## Step 8: Create the Main Billing Page
+
+### Billing.aspx
+
+```html
+<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Billing.aspx.cs" Inherits="ElectricityBillingSystem.Billing" %>
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <title>Electricity Billing System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #444;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .btn {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .grid-view {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .grid-view th, .grid-view td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .grid-view th {
+            background-color: #f2f2f2;
+        }
+        .grid-view tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .error-message {
+            color: red;
+            margin-top: 5px;
+        }
+        .success-message {
+            color: green;
+            margin-top: 5px;
+        }
+        .logout-btn {
+            float: right;
+            background-color: #f44336;
+        }
+        .logout-btn:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Electricity Billing System</h1>
+        <asp:Button ID="btnLogout" runat="server" Text="Logout" CssClass="btn logout-btn" OnClick="btnLogout_Click" />
+        
+        <div class="section">
+            <h2>Add New Bills</h2>
+            <form id="form1" runat="server">
+                <div class="form-group">
+                    <label for="txtNumBills">Number of Bills To Be Added:</label>
+                    <asp:TextBox ID="txtNumBills" runat="server" TextMode="Number" min="1"></asp:TextBox>
+                    <asp:RequiredFieldValidator ID="rfvNumBills" runat="server" ControlToValidate="txtNumBills" 
+                        ErrorMessage="Please enter number of bills" CssClass="error-message"></asp:RequiredFieldValidator>
+                </div>
+                <asp:Button ID="btnGenerateForm" runat="server" Text="Generate Form" CssClass="btn" OnClick="btnGenerateForm_Click" />
+                
+                <div id="billForms" runat="server" visible="false">
+                    <asp:Panel ID="pnlBillForms" runat="server"></asp:Panel>
+                    <asp:Button ID="btnCalculateBills" runat="server" Text="Calculate Bills" CssClass="btn" OnClick="btnCalculateBills_Click" />
+                </div>
+                
+                <asp:Label ID="lblBillResult" runat="server" CssClass="success-message"></asp:Label>
+            </form>
+        </div>
+        
+        <div class="section">
+            <h2>Retrieve Bill Details</h2>
+            <form id="form2" runat="server">
+                <div class="form-group">
+                    <label for="txtNumRecords">Number of Last Bills to Retrieve:</label>
+                    <asp:TextBox ID="txtNumRecords" runat="server" TextMode="Number" min="1"></asp:TextBox>
+                    <asp:RequiredFieldValidator ID="rfvNumRecords" runat="server" ControlToValidate="txtNumRecords" 
+                        ErrorMessage="Please enter number of records" CssClass="error-message"></asp:RequiredFieldValidator>
+                </div>
+                <asp:Button ID="btnRetrieveBills" runat="server" Text="Retrieve Bills" CssClass="btn" OnClick="btnRetrieveBills_Click" />
+                
+                <asp:GridView ID="gvBills" runat="server" CssClass="grid-view" AutoGenerateColumns="False" Visible="false">
+                    <Columns>
+                        <asp:BoundField DataField="ConsumerNumber" HeaderText="Consumer Number" />
+                        <asp:BoundField DataField="ConsumerName" HeaderText="Consumer Name" />
+                        <asp:BoundField DataField="UnitsConsumed" HeaderText="Units Consumed" />
+                        <asp:BoundField DataField="BillAmount" HeaderText="Bill Amount" DataFormatString="{0:C}" />
+                    </Columns>
+                </asp:GridView>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+### Billing.aspx.cs
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+
+namespace ElectricityBillingSystem
+{
+    public partial class Billing : System.Web.UI.Page
+    {
+        protected void Page_Load(object sender, EventArgs e)
+        {
+            if (!IsPostBack)
+            {
+                // Check if admin is logged in
+                if (Session["AdminLoggedIn"] == null || !(bool)Session["AdminLoggedIn"])
+                {
+                    Response.Redirect("Login.aspx");
+                }
+            }
+        }
+
+        protected void btnGenerateForm_Click(object sender, EventArgs e)
+        {
+            if (Page.IsValid)
+            {
+                int numBills = int.Parse(txtNumBills.Text);
+                pnlBillForms.Controls.Clear();
+
+                for (int i = 0; i < numBills; i++)
+                {
+                    // Create consumer number field
+                    Label lblConsumerNumber = new Label();
+                    lblConsumerNumber.Text = $"Consumer Number {i + 1}: ";
+                    pnlBillForms.Controls.Add(lblConsumerNumber);
+
+                    TextBox txtConsumerNumber = new TextBox();
+                    txtConsumerNumber.ID = $"txtConsumerNumber_{i}";
+                    txtConsumerNumber.CssClass = "form-control";
+                    pnlBillForms.Controls.Add(txtConsumerNumber);
+                    pnlBillForms.Controls.Add(new LiteralControl("<br />"));
+
+                    // Create consumer name field
+                    Label lblConsumerName = new Label();
+                    lblConsumerName.Text = $"Consumer Name {i + 1}: ";
+                    pnlBillForms.Controls.Add(lblConsumerName);
+
+                    TextBox txtConsumerName = new TextBox();
+                    txtConsumerName.ID = $"txtConsumerName_{i}";
+                    txtConsumerName.CssClass = "form-control";
+                    pnlBillForms.Controls.Add(txtConsumerName);
+                    pnlBillForms.Controls.Add(new LiteralControl("<br />"));
+
+                    // Create units consumed field
+                    Label lblUnitsConsumed = new Label();
+                    lblUnitsConsumed.Text = $"Units Consumed {i + 1}: ";
+                    pnlBillForms.Controls.Add(lblUnitsConsumed);
+
+                    TextBox txtUnitsConsumed = new TextBox();
+                    txtUnitsConsumed.ID = $"txtUnitsConsumed_{i}";
+                    txtUnitsConsumed.TextMode = TextBoxMode.Number;
+                    txtUnitsConsumed.CssClass = "form-control";
+                    pnlBillForms.Controls.Add(txtUnitsConsumed);
+                    pnlBillForms.Controls.Add(new LiteralControl("<br /><br />"));
+                }
+
+                billForms.Visible = true;
+            }
+        }
+
+        protected void btnCalculateBills_Click(object sender, EventArgs e)
+        {
+            if (Page.IsValid)
+            {
+                int numBills = int.Parse(txtNumBills.Text);
+                ElectricityBoard eb = new ElectricityBoard();
+                BillValidator validator = new BillValidator();
+
+                string result = "";
+                bool allValid = true;
+
+                for (int i = 0; i < numBills; i++)
+                {
+                    TextBox txtConsumerNumber = (TextBox)pnlBillForms.FindControl($"txtConsumerNumber_{i}");
+                    TextBox txtConsumerName = (TextBox)pnlBillForms.FindControl($"txtConsumerName_{i}");
+                    TextBox txtUnitsConsumed = (TextBox)pnlBillForms.FindControl($"txtUnitsConsumed_{i}");
+
+                    try
+                    {
+                        ElectricityBill bill = new ElectricityBill();
+                        bill.ConsumerNumber = txtConsumerNumber.Text;
+                        bill.ConsumerName = txtConsumerName.Text;
+
+                        int units;
+                        if (!int.TryParse(txtUnitsConsumed.Text, out units))
+                        {
+                            result += $"Invalid units for consumer {i + 1}<br />";
+                            allValid = false;
+                            continue;
+                        }
+
+                        string validationMessage = validator.ValidateUnitsConsumed(units);
+                        if (validationMessage != null)
+                        {
+                            result += $"{validationMessage} for consumer {i + 1}<br />";
+                            allValid = false;
+                            continue;
+                        }
+
+                        bill.UnitsConsumed = units;
+                        eb.CalculateBill(bill);
+                        eb.AddBill(bill);
+
+                        result += $"{bill.ConsumerNumber} {bill.ConsumerName} {bill.UnitsConsumed} Bill Amount: {bill.BillAmount}<br />";
+                    }
+                    catch (FormatException ex)
+                    {
+                        result += $"{ex.Message} for consumer {i + 1}<br />";
+                        allValid = false;
+                    }
+                    catch (Exception ex)
+                    {
+                        result += $"Error processing consumer {i + 1}: {ex.Message}<br />";
+                        allValid = false;
+                    }
+                }
+
+                lblBillResult.Text = result;
+                if (allValid)
+                {
+                    lblBillResult.CssClass = "success-message";
+                }
+                else
+                {
+                    lblBillResult.CssClass = "error-message";
+                }
+            }
+        }
+
+        protected void btnRetrieveBills_Click(object sender, EventArgs e)
+        {
+            if (Page.IsValid)
+            {
+                int numRecords = int.Parse(txtNumRecords.Text);
+                ElectricityBoard eb = new ElectricityBoard();
+                List<ElectricityBill> bills = eb.Generate_N_BillDetails(numRecords);
+
+                gvBills.DataSource = bills;
+                gvBills.DataBind();
+                gvBills.Visible = true;
+            }
+        }
+
+        protected void btnLogout_Click(object sender, EventArgs e)
+        {
+            Session["AdminLoggedIn"] = false;
+            Response.Redirect("Login.aspx");
+        }
+    }
+}
+```
+
+## Step 9: Set Up Default Page
+
+### Default.aspx
+
+```html
+<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Default.aspx.cs" Inherits="ElectricityBillingSystem.Default" %>
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <title>Electricity Billing System</title>
+    <meta http-equiv="refresh" content="0;url=Login.aspx" />
+</head>
+<body>
+    <form id="form1" runat="server">
+        <div>
+            Redirecting to login page...
+        </div>
+    </form>
+</body>
+</html>
+```
+
+### Default.aspx.cs
+
+```csharp
+using System;
+
+namespace ElectricityBillingSystem
+{
+    public partial class Default : System.Web.UI.Page
+    {
+        protected void Page_Load(object sender, EventArgs e)
+        {
+            Response.Redirect("Login.aspx");
+        }
+    }
+}
+```
+
+## Step 10: Configure Web.config for Authentication
+
+Add this to your Web.config file inside the `<system.web>` section:
+
+```xml
+<authentication mode="Forms">
+    <forms loginUrl="Login.aspx" timeout="30"></forms>
+</authentication>
+<authorization>
+    <deny users="?"/>
+</authorization>
+```
+
+## Step 11: Build and Run the Application
+
+1. Build the solution (Ctrl+Shift+B)
+2. Run the application (F5)
+3. The application should start with the login page
+4. Use username "admin" and password "admin123" to login
+5. You'll be redirected to the billing page where you can:
+   - Add new bills by specifying the number of bills and entering consumer details
+   - Calculate bills based on units consumed
+   - Retrieve the last N bills from the database
+
+## Key Features Implemented:
+
+1. **Admin Authentication**: Secure login for electricity board admin
+2. **Bill Calculation**: Implements the tiered pricing structure as specified
+3. **Data Validation**:
+   - Consumer number format validation (EB followed by 5 digits)
+   - Units consumed cannot be negative
+4. **Database Operations**:
+   - Storing bill details
+   - Retrieving last N bills
+5. **User Interface**:
+   - Dynamic form generation based on number of bills to add
+   - Clear display of calculated bills
+   - Tabular display of retrieved bills
+
+This solution meets all the requirements specified in the case study, including the billing calculations, database operations, validations, and user interface.
