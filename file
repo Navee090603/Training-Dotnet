@@ -1,0 +1,517 @@
+# **Electricity Board Billing System (ASP.NET WebForms + SQL Server)**
+Here’s the complete implementation of your Electricity Billing System with **Login, Dashboard, Bill Management, Customer Management, and Database Integration**.
+
+---
+
+## **1. Database Setup (SQL Server)**
+Run this script in **SQL Server Management Studio (SSMS)** to create the database and tables.
+
+```sql
+CREATE DATABASE ElectricityBillDB;
+GO
+
+USE ElectricityBillDB;
+GO
+
+-- Admin Login Table
+CREATE TABLE AdminLogin (
+    Username VARCHAR(20) PRIMARY KEY,
+    Password VARCHAR(20) NOT NULL
+);
+GO
+
+-- Customers Table
+CREATE TABLE Customers (
+    ConsumerNumber VARCHAR(20) PRIMARY KEY,
+    ConsumerName VARCHAR(50) NOT NULL,
+    JoinDate DATETIME DEFAULT GETDATE()
+);
+GO
+
+-- Electricity Bills Table
+CREATE TABLE ElectricityBill (
+    BillId INT IDENTITY(1,1) PRIMARY KEY,
+    ConsumerNumber VARCHAR(20) FOREIGN KEY REFERENCES Customers(ConsumerNumber),
+    UnitsConsumed INT NOT NULL,
+    BillAmount FLOAT NOT NULL,
+    BillMonth VARCHAR(20) NOT NULL,
+    CreatedDate DATETIME DEFAULT GETDATE()
+);
+GO
+
+-- Insert a default admin (username: admin, password: admin123)
+INSERT INTO AdminLogin VALUES ('admin', 'admin123');
+GO
+```
+
+---
+
+## **2. ASP.NET WebForms Project Setup**
+### **A. Create a new WebForms Project**
+1. Open **Visual Studio** → **New Project** → **ASP.NET Web Application (.NET Framework)**  
+2. Select **Web Forms** and click **Create**.
+
+### **B. Add a `DBHelper` Class for Database Operations**
+Right-click project → **Add** → **Class** → Name it `DBHelper.cs`
+
+```csharp
+using System;
+using System.Data;
+using System.Data.SqlClient;
+using System.Configuration;
+
+public class DBHelper
+{
+    private static string connectionString = ConfigurationManager.ConnectionStrings["ElectricityBillDB"].ConnectionString;
+
+    // Execute a query and return a DataTable
+    public static DataTable GetDataTable(string query, SqlParameter[] parameters = null)
+    {
+        using (SqlConnection con = new SqlConnection(connectionString))
+        {
+            using (SqlCommand cmd = new SqlCommand(query, con))
+            {
+                if (parameters != null)
+                    cmd.Parameters.AddRange(parameters);
+
+                DataTable dt = new DataTable();
+                SqlDataAdapter da = new SqlDataAdapter(cmd);
+                da.Fill(dt);
+                return dt;
+            }
+        }
+    }
+
+    // Execute Insert/Update/Delete and return rows affected
+    public static int ExecuteNonQuery(string query, SqlParameter[] parameters = null)
+    {
+        using (SqlConnection con = new SqlConnection(connectionString))
+        {
+            con.Open();
+            using (SqlCommand cmd = new SqlCommand(query, con))
+            {
+                if (parameters != null)
+                    cmd.Parameters.AddRange(parameters);
+
+                return cmd.ExecuteNonQuery();
+            }
+        }
+    }
+}
+```
+
+### **C. Add Connection String to `Web.config`**
+```xml
+<connectionStrings>
+    <add name="ElectricityBillDB" 
+         connectionString="Data Source=.;Initial Catalog=ElectricityBillDB;Integrated Security=True;" 
+         providerName="System.Data.SqlClient" />
+</connectionStrings>
+```
+
+---
+
+## **3. Login Page (`Login.aspx`)**
+### **A. Design (`Login.aspx`)**
+```html
+<%@ Page Title="Login" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Login.aspx.cs" Inherits="ElectricityBillingSystem.Login" %>
+
+<asp:Content ID="BodyContent" ContentPlaceHolderID="MainContent" runat="server">
+    <div class="login-form">
+        <h2>Admin Login</h2>
+        <asp:Label ID="lblError" runat="server" ForeColor="Red"></asp:Label>
+        <div>
+            <asp:Label runat="server">Username:</asp:Label>
+            <asp:TextBox ID="txtUsername" runat="server"></asp:TextBox>
+        </div>
+        <div>
+            <asp:Label runat="server">Password:</asp:Label>
+            <asp:TextBox ID="txtPassword" runat="server" TextMode="Password"></asp:TextBox>
+        </div>
+        <div>
+            <asp:Button ID="btnLogin" runat="server" Text="Login" OnClick="btnLogin_Click" />
+        </div>
+    </div>
+</asp:Content>
+```
+
+### **B. Code-Behind (`Login.aspx.cs`)**
+```csharp
+using System;
+using System.Data.SqlClient;
+
+public partial class Login : System.Web.UI.Page
+{
+    protected void btnLogin_Click(object sender, EventArgs e)
+    {
+        string username = txtUsername.Text.Trim();
+        string password = txtPassword.Text.Trim();
+
+        string query = "SELECT COUNT(*) FROM AdminLogin WHERE Username=@Username AND Password=@Password";
+        SqlParameter[] parameters = {
+            new SqlParameter("@Username", username),
+            new SqlParameter("@Password", password)
+        };
+
+        int count = Convert.ToInt32(DBHelper.GetDataTable(query, parameters).Rows[0][0]);
+
+        if (count > 0)
+        {
+            Session["AdminLoggedIn"] = true;
+            Response.Redirect("Dashboard.aspx");
+        }
+        else
+        {
+            lblError.Text = "Invalid Username or Password!";
+        }
+    }
+}
+```
+
+---
+
+## **4. Dashboard (`Dashboard.aspx`)**
+### **A. Master Page (`Site.Master`)**
+```html
+<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Site.master.cs" Inherits="ElectricityBillingSystem.SiteMaster" %>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Electricity Billing System</title>
+</head>
+<body>
+    <div class="navbar">
+        <a href="Dashboard.aspx">Dashboard</a>
+        <a href="AddBill.aspx">Add Bill</a>
+        <a href="ViewBills.aspx">View Bills</a>
+        <a href="AddCustomer.aspx">Add Customer</a>
+        <a href="Customers.aspx">Customers</a>
+        <a href="Logout.aspx">Logout</a>
+    </div>
+    <div class="main-content">
+        <asp:ContentPlaceHolder ID="MainContent" runat="server"></asp:ContentPlaceHolder>
+    </div>
+</body>
+</html>
+```
+
+### **B. Dashboard Page (`Dashboard.aspx`)**
+```html
+<%@ Page Title="Dashboard" MasterPageFile="~/Site.Master" Language="C#" AutoEventWireup="true" CodeBehind="Dashboard.aspx.cs" Inherits="ElectricityBillingSystem.Dashboard" %>
+
+<asp:Content ID="BodyContent" ContentPlaceHolderID="MainContent" runat="server">
+    <h1>Welcome to Electricity Billing System</h1>
+    <p>Select an option from the navigation menu.</p>
+</asp:Content>
+```
+
+---
+
+## **5. Add Bill (`AddBill.aspx`)**
+### **A. Design**
+```html
+<%@ Page Title="Add Bill" MasterPageFile="~/Site.Master" Language="C#" AutoEventWireup="true" CodeBehind="AddBill.aspx.cs" Inherits="ElectricityBillingSystem.AddBill" %>
+
+<asp:Content ID="BodyContent" ContentPlaceHolderID="MainContent" runat="server">
+    <h2>Add New Bill</h2>
+    <asp:Label ID="lblMessage" runat="server" ForeColor="Red"></asp:Label>
+    <div>
+        <asp:Label runat="server">Consumer:</asp:Label>
+        <asp:DropDownList ID="ddlConsumers" runat="server"></asp:DropDownList>
+    </div>
+    <div>
+        <asp:Label runat="server">Units Consumed:</asp:Label>
+        <asp:TextBox ID="txtUnits" runat="server"></asp:TextBox>
+    </div>
+    <div>
+        <asp:Button ID="btnAddBill" runat="server" Text="Generate Bill" OnClick="btnAddBill_Click" />
+    </div>
+</asp:Content>
+```
+
+### **B. Code-Behind**
+```csharp
+using System;
+using System.Data;
+using System.Data.SqlClient;
+
+public partial class AddBill : System.Web.UI.Page
+{
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (!IsPostBack)
+        {
+            LoadConsumers();
+        }
+    }
+
+    private void LoadConsumers()
+    {
+        string query = "SELECT ConsumerNumber, ConsumerName FROM Customers";
+        DataTable dt = DBHelper.GetDataTable(query);
+        ddlConsumers.DataSource = dt;
+        ddlConsumers.DataTextField = "ConsumerName";
+        ddlConsumers.DataValueField = "ConsumerNumber";
+        ddlConsumers.DataBind();
+    }
+
+    protected void btnAddBill_Click(object sender, EventArgs e)
+    {
+        string consumerNumber = ddlConsumers.SelectedValue;
+        int units = Convert.ToInt32(txtUnits.Text);
+        string currentMonth = DateTime.Now.ToString("MMM-yyyy");
+
+        // Check if bill already exists for this month
+        string checkQuery = "SELECT COUNT(*) FROM ElectricityBill WHERE ConsumerNumber=@ConsumerNumber AND BillMonth=@BillMonth";
+        SqlParameter[] checkParams = {
+            new SqlParameter("@ConsumerNumber", consumerNumber),
+            new SqlParameter("@BillMonth", currentMonth)
+        };
+        int billExists = Convert.ToInt32(DBHelper.GetDataTable(checkQuery, checkParams).Rows[0][0]);
+
+        if (billExists > 0)
+        {
+            lblMessage.Text = "Bill already generated for this month!";
+            return;
+        }
+
+        // Calculate bill amount (simple slab rate)
+        double billAmount = CalculateBill(units);
+
+        // Insert bill into DB
+        string insertQuery = "INSERT INTO ElectricityBill (ConsumerNumber, UnitsConsumed, BillAmount, BillMonth) VALUES (@ConsumerNumber, @Units, @Amount, @Month)";
+        SqlParameter[] insertParams = {
+            new SqlParameter("@ConsumerNumber", consumerNumber),
+            new SqlParameter("@Units", units),
+            new SqlParameter("@Amount", billAmount),
+            new SqlParameter("@Month", currentMonth)
+        };
+
+        DBHelper.ExecuteNonQuery(insertQuery, insertParams);
+        lblMessage.Text = "Bill generated successfully!";
+    }
+
+    private double CalculateBill(int units)
+    {
+        // Simple slab rate calculation
+        if (units <= 100) return units * 1.5;
+        else if (units <= 200) return 100 * 1.5 + (units - 100) * 2;
+        else return 100 * 1.5 + 100 * 2 + (units - 200) * 3;
+    }
+}
+```
+
+---
+
+## **6. View Bills (`ViewBills.aspx`)**
+### **A. Design**
+```html
+<%@ Page Title="View Bills" MasterPageFile="~/Site.Master" Language="C#" AutoEventWireup="true" CodeBehind="ViewBills.aspx.cs" Inherits="ElectricityBillingSystem.ViewBills" %>
+
+<asp:Content ID="BodyContent" ContentPlaceHolderID="MainContent" runat="server">
+    <h2>View Bills</h2>
+    <div>
+        <asp:Label runat="server">Enter Number of Bills to Display:</asp:Label>
+        <asp:TextBox ID="txtBillCount" runat="server" Text="5"></asp:TextBox>
+        <asp:Button ID="btnViewBills" runat="server" Text="Show Bills" OnClick="btnViewBills_Click" />
+    </div>
+    <div>
+        <asp:GridView ID="gvBills" runat="server" AutoGenerateColumns="false">
+            <Columns>
+                <asp:BoundField DataField="ConsumerNumber" HeaderText="Consumer No." />
+                <asp:BoundField DataField="ConsumerName" HeaderText="Name" />
+                <asp:BoundField DataField="UnitsConsumed" HeaderText="Units" />
+                <asp:BoundField DataField="BillAmount" HeaderText="Amount" />
+                <asp:BoundField DataField="BillMonth" HeaderText="Month" />
+            </Columns>
+        </asp:GridView>
+    </div>
+</asp:Content>
+```
+
+### **B. Code-Behind**
+```csharp
+using System;
+using System.Data;
+
+public partial class ViewBills : System.Web.UI.Page
+{
+    protected void btnViewBills_Click(object sender, EventArgs e)
+    {
+        int billCount = Convert.ToInt32(txtBillCount.Text);
+        string query = "SELECT TOP " + billCount + " b.ConsumerNumber, c.ConsumerName, b.UnitsConsumed, b.BillAmount, b.BillMonth " +
+                      "FROM ElectricityBill b INNER JOIN Customers c ON b.ConsumerNumber = c.ConsumerNumber " +
+                      "ORDER BY b.BillId DESC";
+
+        DataTable dt = DBHelper.GetDataTable(query);
+        gvBills.DataSource = dt;
+        gvBills.DataBind();
+    }
+}
+```
+
+---
+
+## **7. Add Customer (`AddCustomer.aspx`)**
+### **A. Design**
+```html
+<%@ Page Title="Add Customer" MasterPageFile="~/Site.Master" Language="C#" AutoEventWireup="true" CodeBehind="AddCustomer.aspx.cs" Inherits="ElectricityBillingSystem.AddCustomer" %>
+
+<asp:Content ID="BodyContent" ContentPlaceHolderID="MainContent" runat="server">
+    <h2>Add New Customer</h2>
+    <asp:Label ID="lblMessage" runat="server" ForeColor="Red"></asp:Label>
+    <div>
+        <asp:Label runat="server">Consumer Number (EB12345):</asp:Label>
+        <asp:TextBox ID="txtConsumerNumber" runat="server"></asp:TextBox>
+    </div>
+    <div>
+        <asp:Label runat="server">Name:</asp:Label>
+        <asp:TextBox ID="txtConsumerName" runat="server"></asp:TextBox>
+    </div>
+    <div>
+        <asp:Button ID="btnAddCustomer" runat="server" Text="Add Customer" OnClick="btnAddCustomer_Click" />
+    </div>
+</asp:Content>
+```
+
+### **B. Code-Behind**
+```csharp
+using System;
+using System.Data.SqlClient;
+using System.Text.RegularExpressions;
+
+public partial class AddCustomer : System.Web.UI.Page
+{
+    protected void btnAddCustomer_Click(object sender, EventArgs e)
+    {
+        string consumerNumber = txtConsumerNumber.Text.Trim();
+        string consumerName = txtConsumerName.Text.Trim();
+
+        // Validate Consumer Number (EB followed by 5 digits)
+        if (!Regex.IsMatch(consumerNumber, @"^EB\d{5}$"))
+        {
+            lblMessage.Text = "Consumer Number must be in EB12345 format!";
+            return;
+        }
+
+        // Check if consumer already exists
+        string checkQuery = "SELECT COUNT(*) FROM Customers WHERE ConsumerNumber=@ConsumerNumber";
+        SqlParameter[] checkParams = { new SqlParameter("@ConsumerNumber", consumerNumber) };
+        int exists = Convert.ToInt32(DBHelper.GetDataTable(checkQuery, checkParams).Rows[0][0]);
+
+        if (exists > 0)
+        {
+            lblMessage.Text = "Consumer already exists!";
+            return;
+        }
+
+        // Insert new customer
+        string insertQuery = "INSERT INTO Customers (ConsumerNumber, ConsumerName) VALUES (@ConsumerNumber, @ConsumerName)";
+        SqlParameter[] insertParams = {
+            new SqlParameter("@ConsumerNumber", consumerNumber),
+            new SqlParameter("@ConsumerName", consumerName)
+        };
+
+        DBHelper.ExecuteNonQuery(insertQuery, insertParams);
+        lblMessage.Text = "Customer added successfully!";
+        txtConsumerNumber.Text = "";
+        txtConsumerName.Text = "";
+    }
+}
+```
+
+---
+
+## **8. Customer List (`Customers.aspx`)**
+### **A. Design**
+```html
+<%@ Page Title="Customers" MasterPageFile="~/Site.Master" Language="C#" AutoEventWireup="true" CodeBehind="Customers.aspx.cs" Inherits="ElectricityBillingSystem.Customers" %>
+
+<asp:Content ID="BodyContent" ContentPlaceHolderID="MainContent" runat="server">
+    <h2>Customer List</h2>
+    <div>
+        <asp:GridView ID="gvCustomers" runat="server" AutoGenerateColumns="false" AllowSorting="true" OnSorting="gvCustomers_Sorting">
+            <Columns>
+                <asp:BoundField DataField="ConsumerNumber" HeaderText="Consumer No." SortExpression="ConsumerNumber" />
+                <asp:BoundField DataField="ConsumerName" HeaderText="Name" SortExpression="ConsumerName" />
+                <asp:BoundField DataField="JoinDate" HeaderText="Join Date" SortExpression="JoinDate" DataFormatString="{0:dd-MMM-yyyy}" />
+            </Columns>
+        </asp:GridView>
+    </div>
+</asp:Content>
+```
+
+### **B. Code-Behind**
+```csharp
+using System;
+using System.Data;
+
+public partial class Customers : System.Web.UI.Page
+{
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (!IsPostBack)
+        {
+            LoadCustomers();
+        }
+    }
+
+    private void LoadCustomers()
+    {
+        string query = "SELECT ConsumerNumber, ConsumerName, JoinDate FROM Customers";
+        DataTable dt = DBHelper.GetDataTable(query);
+        gvCustomers.DataSource = dt;
+        gvCustomers.DataBind();
+    }
+
+    protected void gvCustomers_Sorting(object sender, System.Web.UI.WebControls.GridViewSortEventArgs e)
+    {
+        string query = "SELECT ConsumerNumber, ConsumerName, JoinDate FROM Customers ORDER BY " + e.SortExpression;
+        DataTable dt = DBHelper.GetDataTable(query);
+        gvCustomers.DataSource = dt;
+        gvCustomers.DataBind();
+    }
+}
+```
+
+---
+
+## **9. Logout (`Logout.aspx`)**
+### **A. Code-Behind**
+```csharp
+using System;
+
+public partial class Logout : System.Web.UI.Page
+{
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        Session.Clear();
+        Session.Abandon();
+        Response.Redirect("Login.aspx");
+    }
+}
+```
+
+---
+
+## **10. Running the Project**
+1. **Build** the solution.
+2. **Run** the project (F5).
+3. **Login** with `admin` / `admin123`.
+4. **Navigate** through the system using the top menu.
+
+---
+
+### **Key Features Implemented**
+✅ **Admin Login**  
+✅ **Dashboard with Navigation**  
+✅ **Add New Customer (EB12345 format enforced)**  
+✅ **Add Bill (1 bill per customer per month enforced)**  
+✅ **View Last N Bills**  
+✅ **Customer List (Sortable)**  
+✅ **Logout Functionality**  
+
+---
+
+This is a **complete, working solution** for your Electricity Billing System. Let me know if you need any modifications! 🚀
