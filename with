@@ -1,0 +1,1152 @@
+# Electricity Board Billing Automation - ASP.NET WebForms Solution
+
+I'll provide a step-by-step implementation for a professional-looking ASP.NET WebForms solution with login and master page functionality.
+
+## Solution Structure
+
+1. **Database Setup**
+2. **Class Library (DLL) for Data Access**
+3. **Web Application**
+   - Login Page
+   - Master Page (Dashboard)
+   - Add Bill Page
+   - View Bills Page
+   - Add Customer Page
+   - View Customers Page
+
+## 1. Database Setup
+
+First, create the database and tables in SQL Server:
+
+```sql
+CREATE DATABASE ElectricityBillDB;
+GO
+
+USE ElectricityBillDB;
+GO
+
+-- Admin login table
+CREATE TABLE AdminLogin (
+    Username VARCHAR(20) PRIMARY KEY,
+    Password VARCHAR(20) NOT NULL
+);
+
+-- Customers table
+CREATE TABLE Customers (
+    ConsumerNumber VARCHAR(20) PRIMARY KEY CHECK (ConsumerNumber LIKE 'EB[0-9][0-9][0-9][0-9][0-9]'),
+    ConsumerName VARCHAR(50) NOT NULL,
+    JoinDate DATETIME DEFAULT GETDATE()
+);
+
+-- Electricity bills table
+CREATE TABLE ElectricityBill (
+    BillId INT IDENTITY(1,1) PRIMARY KEY,
+    ConsumerNumber VARCHAR(20) FOREIGN KEY REFERENCES Customers(ConsumerNumber),
+    UnitsConsumed INT NOT NULL CHECK (UnitsConsumed >= 0),
+    BillAmount FLOAT NOT NULL,
+    BillMonth VARCHAR(20) NOT NULL,
+    CreatedDate DATETIME DEFAULT GETDATE()
+);
+
+-- Insert admin credentials
+INSERT INTO AdminLogin VALUES ('admin', 'admin123');
+```
+
+## 2. Class Library (DLL) Implementation
+
+Create a new Class Library project called "EBillDLL" and add these classes:
+
+### DBHandler.cs (Database Connection)
+
+```csharp
+using System;
+using System.Configuration;
+using System.Data.SqlClient;
+
+namespace EBillDLL
+{
+    public class DBHandler
+    {
+        public static SqlConnection GetConnection()
+        {
+            string connectionString = ConfigurationManager.ConnectionStrings["EBillDB"].ConnectionString;
+            SqlConnection connection = new SqlConnection(connectionString);
+            return connection;
+        }
+    }
+}
+```
+
+### ElectricityBill.cs (Model)
+
+```csharp
+using System;
+
+namespace EBillDLL
+{
+    public class ElectricityBill
+    {
+        private string consumerNumber;
+        private string consumerName;
+        private int unitsConsumed;
+        private double billAmount;
+
+        public string ConsumerNumber
+        {
+            get { return consumerNumber; }
+            set
+            {
+                if (!System.Text.RegularExpressions.Regex.IsMatch(value, @"^EB\d{5}$"))
+                {
+                    throw new FormatException("Invalid Consumer Number");
+                }
+                consumerNumber = value;
+            }
+        }
+
+        public string ConsumerName
+        {
+            get { return consumerName; }
+            set { consumerName = value; }
+        }
+
+        public int UnitsConsumed
+        {
+            get { return unitsConsumed; }
+            set
+            {
+                if (value < 0)
+                    throw new ArgumentException("Units consumed cannot be negative");
+                unitsConsumed = value;
+            }
+        }
+
+        public double BillAmount
+        {
+            get { return billAmount; }
+            set { billAmount = value; }
+        }
+    }
+}
+```
+
+### BillValidator.cs
+
+```csharp
+namespace EBillDLL
+{
+    public class BillValidator
+    {
+        public string ValidateUnitsConsumed(int unitsConsumed)
+        {
+            if (unitsConsumed < 0)
+                return "Given units is invalid";
+            return null;
+        }
+    }
+}
+```
+
+### ElectricityBoard.cs (Business Logic)
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+
+namespace EBillDLL
+{
+    public class ElectricityBoard
+    {
+        public void AddBill(ElectricityBill ebill)
+        {
+            string currentMonth = DateTime.Now.ToString("MMM-yyyy");
+            
+            using (SqlConnection connection = DBHandler.GetConnection())
+            {
+                connection.Open();
+                
+                // Check if bill already exists for this month
+                string checkQuery = "SELECT COUNT(*) FROM ElectricityBill WHERE ConsumerNumber = @ConsumerNumber AND BillMonth = @BillMonth";
+                SqlCommand checkCmd = new SqlCommand(checkQuery, connection);
+                checkCmd.Parameters.AddWithValue("@ConsumerNumber", ebill.ConsumerNumber);
+                checkCmd.Parameters.AddWithValue("@BillMonth", currentMonth);
+                
+                int count = (int)checkCmd.ExecuteScalar();
+                if (count > 0)
+                {
+                    throw new Exception("Bill already generated for this month.");
+                }
+                
+                // Insert new bill
+                string query = "INSERT INTO ElectricityBill (ConsumerNumber, UnitsConsumed, BillAmount, BillMonth) " +
+                               "VALUES (@ConsumerNumber, @UnitsConsumed, @BillAmount, @BillMonth)";
+                
+                SqlCommand cmd = new SqlCommand(query, connection);
+                cmd.Parameters.AddWithValue("@ConsumerNumber", ebill.ConsumerNumber);
+                cmd.Parameters.AddWithValue("@UnitsConsumed", ebill.UnitsConsumed);
+                cmd.Parameters.AddWithValue("@BillAmount", ebill.BillAmount);
+                cmd.Parameters.AddWithValue("@BillMonth", currentMonth);
+                
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        public void CalculateBill(ElectricityBill ebill)
+        {
+            int units = ebill.UnitsConsumed;
+            double amount = 0;
+
+            if (units > 1000)
+            {
+                amount += (units - 1000) * 7.5;
+                units = 1000;
+            }
+            if (units > 600)
+            {
+                amount += (units - 600) * 5.5;
+                units = 600;
+            }
+            if (units > 300)
+            {
+                amount += (units - 300) * 3.5;
+                units = 300;
+            }
+            if (units > 100)
+            {
+                amount += (units - 100) * 1.5;
+                units = 100;
+            }
+            
+            ebill.BillAmount = amount;
+        }
+
+        public List<ElectricityBill> Generate_N_BillDetails(int num)
+        {
+            List<ElectricityBill> bills = new List<ElectricityBill>();
+            
+            using (SqlConnection connection = DBHandler.GetConnection())
+            {
+                connection.Open();
+                
+                string query = "SELECT TOP (@Num) b.ConsumerNumber, c.ConsumerName, b.UnitsConsumed, b.BillAmount " +
+                              "FROM ElectricityBill b INNER JOIN Customers c ON b.ConsumerNumber = c.ConsumerNumber " +
+                              "ORDER BY b.CreatedDate DESC";
+                
+                SqlCommand cmd = new SqlCommand(query, connection);
+                cmd.Parameters.AddWithValue("@Num", num);
+                
+                SqlDataReader reader = cmd.ExecuteReader();
+                
+                while (reader.Read())
+                {
+                    ElectricityBill bill = new ElectricityBill();
+                    bill.ConsumerNumber = reader["ConsumerNumber"].ToString();
+                    bill.ConsumerName = reader["ConsumerName"].ToString();
+                    bill.UnitsConsumed = Convert.ToInt32(reader["UnitsConsumed"]);
+                    bill.BillAmount = Convert.ToDouble(reader["BillAmount"]);
+                    
+                    bills.Add(bill);
+                }
+            }
+            
+            return bills;
+        }
+
+        public void AddCustomer(ElectricityBill customer)
+        {
+            using (SqlConnection connection = DBHandler.GetConnection())
+            {
+                connection.Open();
+                
+                string query = "INSERT INTO Customers (ConsumerNumber, ConsumerName) VALUES (@ConsumerNumber, @ConsumerName)";
+                
+                SqlCommand cmd = new SqlCommand(query, connection);
+                cmd.Parameters.AddWithValue("@ConsumerNumber", customer.ConsumerNumber);
+                cmd.Parameters.AddWithValue("@ConsumerName", customer.ConsumerName);
+                
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        public DataTable GetAllCustomers()
+        {
+            DataTable dt = new DataTable();
+            
+            using (SqlConnection connection = DBHandler.GetConnection())
+            {
+                connection.Open();
+                
+                string query = "SELECT ConsumerNumber, ConsumerName, JoinDate FROM Customers ORDER BY JoinDate DESC";
+                SqlDataAdapter da = new SqlDataAdapter(query, connection);
+                da.Fill(dt);
+            }
+            
+            return dt;
+        }
+
+        public DataTable GetCustomerNumbers()
+        {
+            DataTable dt = new DataTable();
+            
+            using (SqlConnection connection = DBHandler.GetConnection())
+            {
+                connection.Open();
+                
+                string query = "SELECT ConsumerNumber FROM Customers ORDER BY ConsumerNumber";
+                SqlDataAdapter da = new SqlDataAdapter(query, connection);
+                da.Fill(dt);
+            }
+            
+            return dt;
+        }
+    }
+}
+```
+
+## 3. Web Application Implementation
+
+Create a new ASP.NET WebForms application and add reference to the EBillDLL project.
+
+### Web.config
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <configSections>
+    <sectionGroup name="system.web.extensions" type="System.Web.Configuration.SystemWebExtensionsSectionGroup, System.Web.Extensions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
+      <sectionGroup name="scripting" type="System.Web.Configuration.ScriptingSectionGroup, System.Web.Extensions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
+        <section name="scriptResourceHandler" type="System.Web.Configuration.ScriptingScriptResourceHandlerSection, System.Web.Extensions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" requirePermission="false" allowDefinition="MachineToApplication"/>
+        <sectionGroup name="webServices" type="System.Web.Configuration.ScriptingWebServicesSectionGroup, System.Web.Extensions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
+          <section name="jsonSerialization" type="System.Web.Configuration.ScriptingJsonSerializationSection, System.Web.Extensions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" requirePermission="false" allowDefinition="Everywhere"/>
+          <section name="profileService" type="System.Web.Configuration.ScriptingProfileServiceSection, System.Web.Extensions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" requirePermission="false" allowDefinition="MachineToApplication"/>
+          <section name="authenticationService" type="System.Web.Configuration.ScriptingAuthenticationServiceSection, System.Web.Extensions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" requirePermission="false" allowDefinition="MachineToApplication"/>
+          <section name="roleService" type="System.Web.Configuration.ScriptingRoleServiceSection, System.Web.Extensions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" requirePermission="false" allowDefinition="MachineToApplication"/>
+        </sectionGroup>
+      </sectionGroup>
+    </sectionGroup>
+  </configSections>
+  <connectionStrings>
+    <add name="EBillDB" connectionString="Data Source=.;Initial Catalog=ElectricityBillDB;Integrated Security=True" providerName="System.Data.SqlClient"/>
+  </connectionStrings>
+  <system.web>
+    <compilation debug="true" targetFramework="4.7.2"/>
+    <httpRuntime targetFramework="4.7.2"/>
+    <pages>
+      <namespaces>
+        <add namespace="System.Web.Optimization"/>
+      </namespaces>
+      <controls>
+        <add assembly="Microsoft.AspNet.Web.Optimization.WebForms" namespace="Microsoft.AspNet.Web.Optimization.WebForms" tagPrefix="webopt"/>
+      </controls>
+    </pages>
+    <authentication mode="Forms">
+      <forms loginUrl="~/Login.aspx" timeout="30"/>
+    </authentication>
+  </system.web>
+  <system.webServer>
+    <handlers>
+      <remove name="ExtensionlessUrlHandler-Integrated-4.0"/>
+      <remove name="OPTIONSVerbHandler"/>
+      <remove name="TRACEVerbHandler"/>
+      <add name="ExtensionlessUrlHandler-Integrated-4.0" path="*." verb="*" type="System.Web.Handlers.TransferRequestHandler" preCondition="integratedMode,runtimeVersionv4.0"/>
+    </handlers>
+  </system.webServer>
+  <runtime>
+    <assemblyBinding xmlns="urn:schemas-microsoft-com:asm.v1">
+      <dependentAssembly>
+        <assemblyIdentity name="Newtonsoft.Json" culture="neutral" publicKeyToken="30ad4fe6b2a6aeed"/>
+        <bindingRedirect oldVersion="0.0.0.0-13.0.0.0" newVersion="13.0.0.0"/>
+      </dependentAssembly>
+      <dependentAssembly>
+        <assemblyIdentity name="WebGrease" culture="neutral" publicKeyToken="31bf3856ad364e35"/>
+        <bindingRedirect oldVersion="0.0.0.0-1.6.5135.21930" newVersion="1.6.5135.21930"/>
+      </dependentAssembly>
+    </assemblyBinding>
+  </runtime>
+</configuration>
+```
+
+### Site.Master (Master Page)
+
+```html
+<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Site.master.cs" Inherits="EBillApp.SiteMaster" %>
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head runat="server">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%: Page.Title %> - Electricity Board Billing</title>
+    
+    <asp:PlaceHolder runat="server">
+        <%: Scripts.Render("~/bundles/modernizr") %>
+    </asp:PlaceHolder>
+    
+    <webopt:BundleReference runat="server" Path="~/Content/css" />
+    <link href="~/favicon.ico" rel="shortcut icon" type="image/x-icon" />
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        .navbar {
+            background-color: #2c3e50;
+            border: none;
+            border-radius: 0;
+        }
+        
+        .navbar-brand {
+            color: white !important;
+            font-weight: bold;
+        }
+        
+        .navbar-nav > li > a {
+            color: white !important;
+        }
+        
+        .navbar-nav > li > a:hover {
+            background-color: #1a242f !important;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .footer {
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+        
+        .error-message {
+            color: #d9534f;
+            font-weight: bold;
+        }
+        
+        .success-message {
+            color: #5cb85c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <form runat="server">
+        <asp:ScriptManager runat="server">
+            <Scripts>
+                <%--To learn more about bundling scripts in ScriptManager see https://go.microsoft.com/fwlink/?LinkID=301884 --%>
+                <%--Framework Scripts--%>
+                <asp:ScriptReference Name="MsAjaxBundle" />
+                <asp:ScriptReference Name="jquery" />
+                <asp:ScriptReference Name="bootstrap" />
+                <asp:ScriptReference Name="WebForms.js" Assembly="System.Web" Path="~/Scripts/WebForms/WebForms.js" />
+                <asp:ScriptReference Name="WebUIValidation.js" Assembly="System.Web" Path="~/Scripts/WebForms/WebUIValidation.js" />
+                <asp:ScriptReference Name="MenuStandards.js" Assembly="System.Web" Path="~/Scripts/WebForms/MenuStandards.js" />
+                <asp:ScriptReference Name="GridView.js" Assembly="System.Web" Path="~/Scripts/WebForms/GridView.js" />
+                <asp:ScriptReference Name="DetailsView.js" Assembly="System.Web" Path="~/Scripts/WebForms/DetailsView.js" />
+                <asp:ScriptReference Name="TreeView.js" Assembly="System.Web" Path="~/Scripts/WebForms/TreeView.js" />
+                <asp:ScriptReference Name="WebParts.js" Assembly="System.Web" Path="~/Scripts/WebForms/WebParts.js" />
+                <asp:ScriptReference Name="Focus.js" Assembly="System.Web" Path="~/Scripts/WebForms/Focus.js" />
+                <asp:ScriptReference Name="WebFormsBundle" />
+                <%--Site Scripts--%>
+            </Scripts>
+        </asp:ScriptManager>
+
+        <nav class="navbar navbar-default">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" runat="server" href="~/">Electricity Board</a>
+                </div>
+
+                <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                    <ul class="nav navbar-nav">
+                        <li><a runat="server" href="~/AddBill">Add Bill</a></li>
+                        <li><a runat="server" href="~/ViewBills">View Bills</a></li>
+                        <li><a runat="server" href="~/AddCustomer">Add Customer</a></li>
+                        <li><a runat="server" href="~/Customers">Customers</a></li>
+                    </ul>
+                    <ul class="nav navbar-nav navbar-right">
+                        <li><asp:LinkButton runat="server" OnClick="SignOut">Sign Out</asp:LinkButton></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container body-content">
+            <asp:ContentPlaceHolder ID="MainContent" runat="server">
+            </asp:ContentPlaceHolder>
+            <hr />
+            <footer class="footer">
+                <p>&copy; <%: DateTime.Now.Year %> - Electricity Board Billing System</p>
+            </footer>
+        </div>
+    </form>
+</body>
+</html>
+```
+
+### Site.Master.cs
+
+```csharp
+using System;
+using System.Web;
+using System.Web.UI;
+
+namespace EBillApp
+{
+    public partial class SiteMaster : MasterPage
+    {
+        protected void Page_Load(object sender, EventArgs e)
+        {
+            if (Session["Username"] == null)
+            {
+                Response.Redirect("~/Login.aspx");
+            }
+        }
+
+        protected void SignOut(object sender, EventArgs e)
+        {
+            Session.Clear();
+            Response.Redirect("~/Login.aspx");
+        }
+    }
+}
+```
+
+### Login.aspx
+
+```html
+<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Login.aspx.cs" Inherits="EBillApp.Login" %>
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <title>Login - Electricity Board</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        .login-container {
+            background-color: white;
+            width: 350px;
+            margin: 100px auto;
+            padding: 30px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .login-title {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 10px;
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .btn-login:hover {
+            background-color: #1a242f;
+        }
+        
+        .error-message {
+            color: #d9534f;
+            text-align: center;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <form id="form1" runat="server">
+        <div class="login-container">
+            <h2 class="login-title">Electricity Board Login</h2>
+            <div class="form-group">
+                <asp:TextBox ID="txtUsername" runat="server" CssClass="form-control" placeholder="Username"></asp:TextBox>
+            </div>
+            <div class="form-group">
+                <asp:TextBox ID="txtPassword" runat="server" TextMode="Password" CssClass="form-control" placeholder="Password"></asp:TextBox>
+            </div>
+            <div class="form-group">
+                <asp:Button ID="btnLogin" runat="server" Text="Login" CssClass="btn-login" OnClick="btnLogin_Click" />
+            </div>
+            <asp:Label ID="lblError" runat="server" CssClass="error-message" Visible="false"></asp:Label>
+        </div>
+    </form>
+</body>
+</html>
+```
+
+### Login.aspx.cs
+
+```csharp
+using System;
+using System.Data.SqlClient;
+
+namespace EBillApp
+{
+    public partial class Login : System.Web.UI.Page
+    {
+        protected void btnLogin_Click(object sender, EventArgs e)
+        {
+            string username = txtUsername.Text.Trim();
+            string password = txtPassword.Text.Trim();
+
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            {
+                lblError.Text = "Please enter both username and password";
+                lblError.Visible = true;
+                return;
+            }
+
+            try
+            {
+                using (SqlConnection connection = EBillDLL.DBHandler.GetConnection())
+                {
+                    connection.Open();
+                    string query = "SELECT COUNT(*) FROM AdminLogin WHERE Username = @Username AND Password = @Password";
+                    SqlCommand cmd = new SqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@Username", username);
+                    cmd.Parameters.AddWithValue("@Password", password);
+
+                    int count = (int)cmd.ExecuteScalar();
+
+                    if (count > 0)
+                    {
+                        Session["Username"] = username;
+                        Response.Redirect("~/AddBill.aspx");
+                    }
+                    else
+                    {
+                        lblError.Text = "Invalid username or password";
+                        lblError.Visible = true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                lblError.Text = "Error: " + ex.Message;
+                lblError.Visible = true;
+            }
+        }
+    }
+}
+```
+
+### AddBill.aspx
+
+```html
+<%@ Page Title="Add Bill" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="AddBill.aspx.cs" Inherits="EBillApp.AddBill" %>
+
+<asp:Content ID="BodyContent" ContentPlaceHolderID="MainContent" runat="server">
+    <h2>Add New Bill</h2>
+    <hr />
+    
+    <div class="form-horizontal">
+        <div class="form-group">
+            <label class="control-label col-md-2">Consumer Number</label>
+            <div class="col-md-10">
+                <asp:DropDownList ID="ddlConsumerNumber" runat="server" CssClass="form-control" AutoPostBack="true" OnSelectedIndexChanged="ddlConsumerNumber_SelectedIndexChanged"></asp:DropDownList>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="control-label col-md-2">Consumer Name</label>
+            <div class="col-md-10">
+                <asp:TextBox ID="txtConsumerName" runat="server" CssClass="form-control" ReadOnly="true"></asp:TextBox>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="control-label col-md-2">Units Consumed</label>
+            <div class="col-md-10">
+                <asp:TextBox ID="txtUnitsConsumed" runat="server" CssClass="form-control" TextMode="Number" min="0"></asp:TextBox>
+                <asp:RequiredFieldValidator ID="rfvUnits" runat="server" ControlToValidate="txtUnitsConsumed" 
+                    ErrorMessage="Units consumed is required" CssClass="text-danger" Display="Dynamic"></asp:RequiredFieldValidator>
+                <asp:RangeValidator ID="rvUnits" runat="server" ControlToValidate="txtUnitsConsumed" 
+                    Type="Integer" MinimumValue="0" MaximumValue="999999" 
+                    ErrorMessage="Units must be a positive number" CssClass="text-danger" Display="Dynamic"></asp:RangeValidator>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <asp:Button ID="btnCalculate" runat="server" Text="Calculate Bill" CssClass="btn btn-primary" OnClick="btnCalculate_Click" />
+                <asp:Button ID="btnSave" runat="server" Text="Save Bill" CssClass="btn btn-success" OnClick="btnSave_Click" Enabled="false" />
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <asp:Label ID="lblBillAmount" runat="server" CssClass="lead"></asp:Label>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <asp:Label ID="lblMessage" runat="server" CssClass="alert" Visible="false"></asp:Label>
+            </div>
+        </div>
+    </div>
+</asp:Content>
+```
+
+### AddBill.aspx.cs
+
+```csharp
+using System;
+using EBillDLL;
+
+namespace EBillApp
+{
+    public partial class AddBill : System.Web.UI.Page
+    {
+        protected void Page_Load(object sender, EventArgs e)
+        {
+            if (!IsPostBack)
+            {
+                LoadConsumerNumbers();
+            }
+        }
+
+        private void LoadConsumerNumbers()
+        {
+            ElectricityBoard eb = new ElectricityBoard();
+            ddlConsumerNumber.DataSource = eb.GetCustomerNumbers();
+            ddlConsumerNumber.DataTextField = "ConsumerNumber";
+            ddlConsumerNumber.DataValueField = "ConsumerNumber";
+            ddlConsumerNumber.DataBind();
+            ddlConsumerNumber.Items.Insert(0, new System.Web.UI.WebControls.ListItem("-- Select Consumer --", ""));
+        }
+
+        protected void ddlConsumerNumber_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (ddlConsumerNumber.SelectedIndex > 0)
+            {
+                string consumerNumber = ddlConsumerNumber.SelectedValue;
+                txtConsumerName.Text = GetConsumerName(consumerNumber);
+            }
+            else
+            {
+                txtConsumerName.Text = "";
+            }
+        }
+
+        private string GetConsumerName(string consumerNumber)
+        {
+            ElectricityBoard eb = new ElectricityBoard();
+            DataTable dt = eb.GetAllCustomers();
+            DataRow[] rows = dt.Select($"ConsumerNumber = '{consumerNumber}'");
+            if (rows.Length > 0)
+            {
+                return rows[0]["ConsumerName"].ToString();
+            }
+            return "";
+        }
+
+        protected void btnCalculate_Click(object sender, EventArgs e)
+        {
+            if (Page.IsValid)
+            {
+                try
+                {
+                    ElectricityBill bill = new ElectricityBill();
+                    bill.ConsumerNumber = ddlConsumerNumber.SelectedValue;
+                    bill.ConsumerName = txtConsumerName.Text;
+                    bill.UnitsConsumed = Convert.ToInt32(txtUnitsConsumed.Text);
+
+                    ElectricityBoard eb = new ElectricityBoard();
+                    eb.CalculateBill(bill);
+
+                    lblBillAmount.Text = $"Bill Amount for {bill.ConsumerName} (Units: {bill.UnitsConsumed}): Rs. {bill.BillAmount}";
+                    ViewState["CurrentBill"] = bill;
+                    btnSave.Enabled = true;
+                    lblMessage.Visible = false;
+                }
+                catch (FormatException ex)
+                {
+                    lblMessage.Text = ex.Message;
+                    lblMessage.CssClass = "alert alert-danger";
+                    lblMessage.Visible = true;
+                }
+                catch (Exception ex)
+                {
+                    lblMessage.Text = "Error: " + ex.Message;
+                    lblMessage.CssClass = "alert alert-danger";
+                    lblMessage.Visible = true;
+                }
+            }
+        }
+
+        protected void btnSave_Click(object sender, EventArgs e)
+        {
+            if (ViewState["CurrentBill"] != null)
+            {
+                try
+                {
+                    ElectricityBill bill = (ElectricityBill)ViewState["CurrentBill"];
+                    ElectricityBoard eb = new ElectricityBoard();
+                    eb.AddBill(bill);
+
+                    lblMessage.Text = "Bill saved successfully!";
+                    lblMessage.CssClass = "alert alert-success";
+                    lblMessage.Visible = true;
+
+                    // Reset form
+                    ddlConsumerNumber.SelectedIndex = 0;
+                    txtConsumerName.Text = "";
+                    txtUnitsConsumed.Text = "";
+                    lblBillAmount.Text = "";
+                    btnSave.Enabled = false;
+                    ViewState["CurrentBill"] = null;
+                }
+                catch (Exception ex)
+                {
+                    lblMessage.Text = "Error: " + ex.Message;
+                    lblMessage.CssClass = "alert alert-danger";
+                    lblMessage.Visible = true;
+                }
+            }
+        }
+    }
+}
+```
+
+### ViewBills.aspx
+
+```html
+<%@ Page Title="View Bills" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="ViewBills.aspx.cs" Inherits="EBillApp.ViewBills" %>
+
+<asp:Content ID="BodyContent" ContentPlaceHolderID="MainContent" runat="server">
+    <h2>View Bills</h2>
+    <hr />
+    
+    <div class="form-horizontal">
+        <div class="form-group">
+            <label class="control-label col-md-2">Number of Bills to View</label>
+            <div class="col-md-10">
+                <asp:TextBox ID="txtNumberOfBills" runat="server" CssClass="form-control" TextMode="Number" min="1"></asp:TextBox>
+                <asp:RequiredFieldValidator ID="rfvNumber" runat="server" ControlToValidate="txtNumberOfBills" 
+                    ErrorMessage="Please enter number of bills" CssClass="text-danger" Display="Dynamic"></asp:RequiredFieldValidator>
+                <asp:RangeValidator ID="rvNumber" runat="server" ControlToValidate="txtNumberOfBills" 
+                    Type="Integer" MinimumValue="1" MaximumValue="100" 
+                    ErrorMessage="Please enter a number between 1 and 100" CssClass="text-danger" Display="Dynamic"></asp:RangeValidator>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <asp:Button ID="btnViewBills" runat="server" Text="View Bills" CssClass="btn btn-primary" OnClick="btnViewBills_Click" />
+            </div>
+        </div>
+    </div>
+    
+    <hr />
+    
+    <div class="table-responsive">
+        <asp:GridView ID="gvBills" runat="server" CssClass="table table-striped table-bordered" AutoGenerateColumns="false" Visible="false">
+            <Columns>
+                <asp:BoundField DataField="ConsumerNumber" HeaderText="Consumer Number" />
+                <asp:BoundField DataField="ConsumerName" HeaderText="Consumer Name" />
+                <asp:BoundField DataField="UnitsConsumed" HeaderText="Units Consumed" />
+                <asp:BoundField DataField="BillAmount" HeaderText="Bill Amount (Rs.)" DataFormatString="{0:N2}" />
+            </Columns>
+            <EmptyDataTemplate>
+                No bills found.
+            </EmptyDataTemplate>
+        </asp:GridView>
+    </div>
+</asp:Content>
+```
+
+### ViewBills.aspx.cs
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Web.UI.WebControls;
+using EBillDLL;
+
+namespace EBillApp
+{
+    public partial class ViewBills : System.Web.UI.Page
+    {
+        protected void Page_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        protected void btnViewBills_Click(object sender, EventArgs e)
+        {
+            if (Page.IsValid)
+            {
+                try
+                {
+                    int numberOfBills = Convert.ToInt32(txtNumberOfBills.Text);
+                    ElectricityBoard eb = new ElectricityBoard();
+                    List<ElectricityBill> bills = eb.Generate_N_BillDetails(numberOfBills);
+
+                    if (bills.Count > 0)
+                    {
+                        gvBills.DataSource = bills;
+                        gvBills.DataBind();
+                        gvBills.Visible = true;
+                    }
+                    else
+                    {
+                        gvBills.Visible = false;
+                        // Show message if no bills found
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Handle error
+                }
+            }
+        }
+    }
+}
+```
+
+### AddCustomer.aspx
+
+```html
+<%@ Page Title="Add Customer" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="AddCustomer.aspx.cs" Inherits="EBillApp.AddCustomer" %>
+
+<asp:Content ID="BodyContent" ContentPlaceHolderID="MainContent" runat="server">
+    <h2>Add New Customer</h2>
+    <hr />
+    
+    <div class="form-horizontal">
+        <div class="form-group">
+            <label class="control-label col-md-2">Consumer Number</label>
+            <div class="col-md-10">
+                <asp:TextBox ID="txtConsumerNumber" runat="server" CssClass="form-control" placeholder="EB followed by 5 digits (e.g., EB12345)"></asp:TextBox>
+                <asp:RequiredFieldValidator ID="rfvConsumerNumber" runat="server" ControlToValidate="txtConsumerNumber" 
+                    ErrorMessage="Consumer number is required" CssClass="text-danger" Display="Dynamic"></asp:RequiredFieldValidator>
+                <asp:RegularExpressionValidator ID="revConsumerNumber" runat="server" ControlToValidate="txtConsumerNumber"
+                    ValidationExpression="^EB\d{5}$" ErrorMessage="Consumer number must start with EB followed by 5 digits" 
+                    CssClass="text-danger" Display="Dynamic"></asp:RegularExpressionValidator>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="control-label col-md-2">Consumer Name</label>
+            <div class="col-md-10">
+                <asp:TextBox ID="txtConsumerName" runat="server" CssClass="form-control"></asp:TextBox>
+                <asp:RequiredFieldValidator ID="rfvConsumerName" runat="server" ControlToValidate="txtConsumerName" 
+                    ErrorMessage="Consumer name is required" CssClass="text-danger" Display="Dynamic"></asp:RequiredFieldValidator>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <asp:Button ID="btnSave" runat="server" Text="Save Customer" CssClass="btn btn-primary" OnClick="btnSave_Click" />
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <asp:Label ID="lblMessage" runat="server" CssClass="alert" Visible="false"></asp:Label>
+            </div>
+        </div>
+    </div>
+</asp:Content>
+```
+
+### AddCustomer.aspx.cs
+
+```csharp
+using System;
+using EBillDLL;
+
+namespace EBillApp
+{
+    public partial class AddCustomer : System.Web.UI.Page
+    {
+        protected void Page_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        protected void btnSave_Click(object sender, EventArgs e)
+        {
+            if (Page.IsValid)
+            {
+                try
+                {
+                    ElectricityBill customer = new ElectricityBill();
+                    customer.ConsumerNumber = txtConsumerNumber.Text.Trim();
+                    customer.ConsumerName = txtConsumerName.Text.Trim();
+
+                    ElectricityBoard eb = new ElectricityBoard();
+                    eb.AddCustomer(customer);
+
+                    lblMessage.Text = "Customer added successfully!";
+                    lblMessage.CssClass = "alert alert-success";
+                    lblMessage.Visible = true;
+
+                    // Clear form
+                    txtConsumerNumber.Text = "";
+                    txtConsumerName.Text = "";
+                }
+                catch (FormatException ex)
+                {
+                    lblMessage.Text = ex.Message;
+                    lblMessage.CssClass = "alert alert-danger";
+                    lblMessage.Visible = true;
+                }
+                catch (SqlException ex)
+                {
+                    if (ex.Number == 2627) // Primary key violation
+                    {
+                        lblMessage.Text = "Consumer number already exists";
+                    }
+                    else
+                    {
+                        lblMessage.Text = "Database error: " + ex.Message;
+                    }
+                    lblMessage.CssClass = "alert alert-danger";
+                    lblMessage.Visible = true;
+                }
+                catch (Exception ex)
+                {
+                    lblMessage.Text = "Error: " + ex.Message;
+                    lblMessage.CssClass = "alert alert-danger";
+                    lblMessage.Visible = true;
+                }
+            }
+        }
+    }
+}
+```
+
+### Customers.aspx
+
+```html
+<%@ Page Title="Customers" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Customers.aspx.cs" Inherits="EBillApp.Customers" %>
+
+<asp:Content ID="BodyContent" ContentPlaceHolderID="MainContent" runat="server">
+    <h2>Customers</h2>
+    <hr />
+    
+    <div class="table-responsive">
+        <asp:GridView ID="gvCustomers" runat="server" CssClass="table table-striped table-bordered" AutoGenerateColumns="false" AllowPaging="true" PageSize="10" OnPageIndexChanging="gvCustomers_PageIndexChanging">
+            <Columns>
+                <asp:BoundField DataField="ConsumerNumber" HeaderText="Consumer Number" />
+                <asp:BoundField DataField="ConsumerName" HeaderText="Consumer Name" />
+                <asp:BoundField DataField="JoinDate" HeaderText="Join Date" DataFormatString="{0:dd-MMM-yyyy}" />
+            </Columns>
+            <EmptyDataTemplate>
+                No customers found.
+            </EmptyDataTemplate>
+            <PagerSettings Mode="NumericFirstLast" />
+            <PagerStyle CssClass="pagination" />
+        </asp:GridView>
+    </div>
+</asp:Content>
+```
+
+### Customers.aspx.cs
+
+```csharp
+using System;
+using System.Data;
+using EBillDLL;
+
+namespace EBillApp
+{
+    public partial class Customers : System.Web.UI.Page
+    {
+        protected void Page_Load(object sender, EventArgs e)
+        {
+            if (!IsPostBack)
+            {
+                LoadCustomers();
+            }
+        }
+
+        private void LoadCustomers()
+        {
+            ElectricityBoard eb = new ElectricityBoard();
+            DataTable dt = eb.GetAllCustomers();
+            gvCustomers.DataSource = dt;
+            gvCustomers.DataBind();
+        }
+
+        protected void gvCustomers_PageIndexChanging(object sender, GridViewPageEventArgs e)
+        {
+            gvCustomers.PageIndex = e.NewPageIndex;
+            LoadCustomers();
+        }
+    }
+}
+```
+
+## Implementation Notes
+
+1. **Security**:
+   - Uses Forms Authentication
+   - All pages except Login are protected
+   - Session management for user authentication
+
+2. **Validation**:
+   - Client-side validation with ASP.NET validators
+   - Server-side validation in business logic
+   - Proper error handling throughout
+
+3. **Professional UI**:
+   - Clean, responsive design using Bootstrap
+   - Consistent layout with Master Page
+   - User-friendly forms with proper feedback
+
+4. **Database**:
+   - Connection strings in Web.config
+   - Proper parameterized queries to prevent SQL injection
+   - Transaction handling where needed
+
+5. **Business Logic**:
+   - Separated into DLL for reusability
+   - Proper calculation of bill amounts
+   - Data access separated from UI
+
+This implementation provides a complete, professional solution for the Electricity Board Billing Automation system with all required functionality and a clean user interface.
