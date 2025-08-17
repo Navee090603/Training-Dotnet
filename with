@@ -1158,3 +1158,12 @@ namespace EBillApp
    - Data access separated from UI
 
 This implementation provides a complete, professional solution for the Electricity Board Billing Automation system with all required functionality and a clean user interface.
+-------
+
+<ul class="nav navbar-nav navbar-right">
+    <li>
+        <asp:LinkButton runat="server" ID="lnkSignOut" OnClick="SignOut" CssClass="logout-btn">
+            <span class="glyphicon glyphicon-log-out"></span> Sign Out
+        </asp:LinkButton>
+    </li>
+</ul>
